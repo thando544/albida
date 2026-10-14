@@ -1,17 +1,12 @@
 import http from 'node:http';
-import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { listReports, saveReport } from './report-store.js';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { createReportPdf } from './report-pdf.js';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = process.env.ALBIDA_DATA_DIR || path.join(root, 'data');
-await mkdir(dataDir, { recursive: true });
-const database = path.join(dataDir, 'reports.json');
-let reports;
-try { reports = JSON.parse(await readFile(database, 'utf8')); }
-catch (error) { if (error.code !== 'ENOENT') throw error; reports = []; }
 const services = ['Breakfast & lunch', 'Dinner'];
 const menus = ['Zambezi Menu', 'African Heritage', 'Breakfast & lunch', 'Local Experience'];
 function validate(body) {
@@ -31,38 +26,27 @@ function validate(body) {
   });
   return result;
 }
-let saveQueue = Promise.resolve();
-function save(report) {
-  const operation = saveQueue.then(async () => {
-    const next = [report, ...reports];
-    await writeFile(database + '.tmp', JSON.stringify(next, null, 2));
-    await rename(database + '.tmp', database);
-    reports = next;
-  });
-  saveQueue = operation.catch(() => {});
-  return operation;
-}
 function pdf(report, res) {
   res.writeHead(200, {'Content-Type':'application/pdf','Content-Disposition':`attachment; filename="albida-report-${report.date}.pdf"`});
   createReportPdf(report).pipe(res);
 }
-const server = http.createServer(async (req, res) => {
+export default async function handler(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const json = (status, value) => { res.writeHead(status, {'Content-Type':'application/json'}); res.end(JSON.stringify(value)); };
   try {
-    if (url.pathname === '/api/reports' && req.method === 'GET') return json(200, reports);
+    if (url.pathname === '/api/reports' && req.method === 'GET') return json(200, await listReports());
     if (url.pathname === '/api/reports' && req.method === 'POST') {
       let raw = '';
       for await (const chunk of req) { raw += chunk; if (Buffer.byteLength(raw) > 100000) return json(413, {error:'Report is too large'}); }
       let report;
       try { report = {...validate(JSON.parse(raw)), id:randomUUID(), createdAt:new Date().toISOString()}; }
       catch (error) { return json(400, {error:error.message}); }
-      await save(report);
+      await saveReport(report);
       return json(201, report);
     }
     const match = url.pathname.match(/^\/api\/reports\/([\w-]+)\/pdf$/);
     if (match && req.method === 'GET') {
-      const report = reports.find(r => r.id === match[1]);
+      const report = (await listReports()).find(r => r.id === match[1]);
       if (!report) return json(404, {error:'Report not found'});
       return pdf(report,res);
     }
@@ -71,6 +55,7 @@ const server = http.createServer(async (req, res) => {
     const name = files[url.pathname];
     res.writeHead(200, {'Content-Type':name.endsWith('.css')?'text/css':name.endsWith('.js')?'text/javascript':'text/html'});
     res.end(await readFile(path.join(root,'public',name)));
-  } catch (error) { console.error(error); if (!res.headersSent) json(500,{error:'Unable to complete the request. Please try again.'}); else res.end(); }
-});
-server.listen(process.env.PORT || 3100, process.env.HOST || '127.0.0.1', () => console.log(`ALBIDA Kitchen: http://${process.env.HOST || '127.0.0.1'}:${process.env.PORT || 3100}`));
+  } catch (error) { console.error(error); if (!res.headersSent) json(error.statusCode || 500,{error:error.statusCode === 503 ? error.message : 'Unable to complete the request. Please try again.'}); else res.end(); }
+}
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain && !process.env.VERCEL) http.createServer(handler).listen(process.env.PORT || 3100, process.env.HOST || '127.0.0.1', () => console.log(`ALBIDA Kitchen: http://${process.env.HOST || '127.0.0.1'}:${process.env.PORT || 3100}`));

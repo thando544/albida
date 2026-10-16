@@ -3,3 +3,5 @@
 .share-link{display:inline-block;margin:10px 0 0 12px;color:var(--ink)}.report-item .share-link{display:block;margin-left:0}.form-footer{gap:14px;flex-wrap:wrap}
 
 main{padding-top:32px}.journal{margin-top:0}
+
+.workspace{grid-template-columns:minmax(0,1fr);max-width:860px;margin:auto}

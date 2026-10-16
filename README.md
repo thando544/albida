@@ -12,7 +12,7 @@ npm start
 
 Open http://127.0.0.1:3100. Requires Node.js 20 or newer.
 
-Complete the report, add dish quantities, and select **Submit & open WhatsApp**. Download a PDF from the success message or saved reports list. **View / reuse** loads a saved report; saving it creates a new entry. The example button fills the supplied October 13 report for review.
+Complete the report, add dish quantities, and select **Submit & open WhatsApp**. Download a PDF from the success message or saved reports list. **View / reuse** loads a saved report; saving it creates a new entry.
 
 Reports persist in `data/reports.json` (excluded from Git). Back up this directory. Optional environment variables: `PORT`, `HOST`, `ALBIDA_DATA_DIR`.
 

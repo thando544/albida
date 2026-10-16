@@ -33,7 +33,6 @@ function renderReports(){
 form.addEventListener('input',()=>{dirty=true;});form.addEventListener('change',()=>{dirty=true;serviceLabel();});
 document.querySelector('#add-dish').onclick=()=>{addDish();dirty=true;dishes.lastElementChild.children[1].focus();};
 document.querySelector('#new-report').onclick=()=>{if(mayReplace())reset();};
-document.querySelector('#sample').onclick=()=>{if(!mayReplace())return;populate({date:'2026-10-13',chef:'Munashe',service:'Dinner',covers:5,menu:'Zambezi Menu',overview:'Intimate service for 5 guests. Everything went well.',dishes:[{quantity:4,name:'Mushroom soup'},{quantity:4,name:'Grilled Lamb'},{quantity:1,name:'Fish Nicoise'}],dietary:'1 × Gluten free',turndown:'5 rooms serviced — turndowners completed to standard.',feedback:'Positive feedback. Guests enjoyed all their meals.',conclusion:'Quiet, precise service. High standard maintained.',notes:'Breakfast time not yet confirmed.'});dirty=true;status.textContent='Example loaded. Choose the menu served and review the details before saving.';};
 form.onsubmit=async event=>{
   event.preventDefault();
   const whatsappWindow=window.open('about:blank','_blank');
